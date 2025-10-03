@@ -1,0 +1,13 @@
+sqlmodel 
+fastapi
+uvicorn
+sqlmodel
+sqlalchemy
+requests
+beautifulsoup4
+python-multipart
+openai
+python-dotenv
+tiktoken 
+python-jose[cryptography]
+passlib[bcrypt]
