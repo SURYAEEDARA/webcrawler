@@ -1,93 +1,82 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import Profile from './Profile';
+import { Button } from './ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { Separator } from './ui/separator';
 
 const Navbar: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
-  const [showProfile, setShowProfile] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    setIsOpen(false);
+  };
 
   return (
-    <nav style={{
-      backgroundColor: 'white',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      padding: '1rem 2rem',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      position: 'relative'
-    }}>
-      {/* Logo */}
-      <Link 
-        to="/" 
-        style={{ 
-          fontSize: '1.5rem', 
-          fontWeight: 'bold', 
-          color: '#4f46e5', 
-          textDecoration: 'none' 
-        }}
-      >
-        WebAnalyzer
-      </Link>
+    <nav className="bg-white shadow-sm border-b">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link
+            to="/"
+            className="text-2xl font-bold text-primary hover:text-primary/90 transition-colors"
+          >
+            WebAnalyzer
+          </Link>
 
-      {/* Navigation Links */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        {!isAuthenticated ? (
-          <>
-            <Link 
-              to="/login" 
-              style={{ 
-                color: '#374151', 
-                textDecoration: 'none',
-                padding: '0.5rem 1rem'
-              }}
-            >
-              Login
-            </Link>
-            <span style={{ color: '#d1d5db' }}>|</span>
-            <Link 
-              to="/signup" 
-              style={{ 
-                color: '#374151', 
-                textDecoration: 'none',
-                padding: '0.5rem 1rem'
-              }}
-            >
-              Register
-            </Link>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => setShowProfile(!showProfile)}
-              style={{
-                backgroundColor: '#4f46e5',
-                color: 'white',
-                border: 'none',
-                padding: '0.5rem 1rem',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Profile
-            </button>
-            {showProfile && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                right: '2rem',
-                backgroundColor: 'white',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                borderRadius: '8px',
-                padding: '1rem',
-                minWidth: '200px',
-                zIndex: 1000
-              }}>
-                <Profile onClose={() => setShowProfile(false)} />
-              </div>
+          {/* Navigation Links */}
+          <div className="flex items-center gap-4">
+            {!isAuthenticated ? (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/signup">
+                  <Button size="sm">
+                    Register
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {user?.username?.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  {/* Profile Dropdown Content */}
+                  <div className="flex items-center gap-2 p-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {user?.username?.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user?.username}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </div>
+                  <Separator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </nav>
   );

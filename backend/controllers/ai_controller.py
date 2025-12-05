@@ -1,125 +1,248 @@
-from sqlmodel import Session
 from fastapi import HTTPException
-from models.website import Website
-from config.openai_config import get_openai_client
-import tiktoken 
+from config.ai_config import AIConfig
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class AIController:
-    @staticmethod
-    def analyze_grammar(content: str) -> dict:
-        """Analyze text grammar and provide suggestions using OpenAI"""
+    def __init__(self):
+        self.api_token = os.getenv("HUGGINGFACE_API_TOKEN") or os.getenv("HF_TOKEN")
+        self.api_url = "https://router.huggingface.co/v1/chat/completions"
+        print(f"AI controller initialized with model: {AIConfig.HF_MODEL}")
+        if self.api_token:
+            print(f"Hugging Face API token found: {self.api_token[:10]}...")
+        else:
+            print("Hugging Face API token not found")
+    
+    def analyze_grammar(self, content: str):
+        if not self.api_token:
+            raise HTTPException(
+                status_code=503, 
+                detail="Hugging Face API token not configured."
+            )
+        
         try:
-            client = get_openai_client()
+            if len(content) > AIConfig.MAX_CONTENT_LENGTH:
+                content = content[:AIConfig.MAX_CONTENT_LENGTH] + "..."
             
-            if len(content) > 12000:
-                content = content[:12000] + "... [content truncated for analysis]"
+            system_prompt = """You are an expert content quality analyst specializing in web content, grammar, readability, and SEO best practices. 
+
+Analyze the provided website content and respond in this EXACT format:
+
+SCORE: [number from 0-100]
+
+GRAMMAR & STYLE ISSUES:
+1. [Specific grammar, punctuation, or style issue with example]
+2. [Specific grammar, punctuation, or style issue with example]
+3. [Specific grammar, punctuation, or style issue with example]
+
+READABILITY ISSUES:
+1. [Specific readability concern]
+2. [Specific readability concern]
+
+SEO & CONTENT ISSUES:
+1. [Specific SEO or content structure issue]
+2. [Specific SEO or content structure issue]
+
+SUGGESTIONS:
+1. [Specific, actionable improvement with example]
+2. [Specific, actionable improvement with example]
+3. [Specific, actionable improvement with example]
+4. [Specific, actionable improvement with example]
+5. [Specific, actionable improvement with example]
+
+Scoring guide:
+95-100: Perfect professional content
+85-94: Excellent with minor polish needed
+75-84: Good quality, some improvements recommended
+60-74: Acceptable but needs work
+40-59: Poor quality, major revisions needed
+0-39: Very poor, complete rewrite required
+
+Be specific! Quote actual text when mentioning issues."""
             
-            prompt = f"""
-            Analyze the following text for grammar, spelling, punctuation, and style issues.
-            Provide a comprehensive analysis with:
-            1. Overall grammar score (0-100)
-            2. List of specific issues found
-            3. Specific improvement suggestions
-            4. Revised version of problematic sections
+            user_prompt = f"Analyze this website content for quality, grammar, readability, and SEO:\n\n{content}"
             
-            Text to analyze:
-            {content}
+            headers = {
+                "Authorization": f"Bearer {self.api_token}",
+                "Content-Type": "application/json"
+            }
             
-            Format your response as:
-            GRAMMAR_SCORE: [number]/100
-            KEY_ISSUES: [bullet points]
-            SUGGESTIONS: [bullet points]
-            REVISED_EXAMPLES: [specific examples with corrections]
-            """
-            
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are an expert English grammar and writing style analyst."},
-                    {"role": "user", "content": prompt}
+            payload = {
+                "model": AIConfig.HF_MODEL,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.3,
-                max_tokens=1000
+                "max_tokens": 1000, 
+                "temperature": 0.3,
+                "top_p": 0.9
+            }
+            
+            print(f"Calling HF Inference Providers API...")
+            response = requests.post(
+                self.api_url,
+                headers=headers,
+                json=payload,
+                timeout=60
             )
             
-            analysis_text = response.choices[0].message.content
-            return AIController._parse_analysis_response(analysis_text)
+            print(f"Response status: {response.status_code}")
             
+            if response.status_code == 401:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid Hugging Face token. Check your HF_TOKEN or HUGGINGFACE_API_TOKEN."
+                )
+            
+            if response.status_code == 404:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Model '{AIConfig.HF_MODEL}' not available. Use a model from Inference Providers."
+                )
+            
+            if response.status_code == 503:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Service temporarily unavailable. Please try again in a moment."
+                )
+            
+            if response.status_code != 200:
+                error_msg = response.text[:300]
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"HF API error: {error_msg}"
+                )
+            
+            result = response.json()
+            
+            if "choices" in result and len(result["choices"]) > 0:
+                analysis_text = result["choices"][0]["message"]["content"]
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Unexpected response format: {str(result)[:200]}"
+                )
+            
+            analysis_text = self._clean_response(analysis_text)
+            
+            return {
+                "success": True,
+                "analysis": analysis_text,
+                "content_preview": content[:200] + "..." if len(content) > 200 else content
+            }
+            
+        except HTTPException:
+            raise
+        except requests.exceptions.Timeout:
+            raise HTTPException(
+                status_code=504, 
+                detail="Request timeout. Please try again."
+            )
+        except requests.exceptions.RequestException as e:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Connection error: {str(e)}"
+            )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"AI analysis failed: {str(e)}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Analysis failed: {str(e)}"
+            )
     
-    @staticmethod
-    def _parse_analysis_response(response_text: str) -> dict:
-        """Parse the AI response into structured data"""
+    def _clean_response(self, text: str) -> str:
+        import re
+        
+        text = re.sub(r'\*\*🤔.*?\*\*', '', text, flags=re.DOTALL)
+        text = re.sub(r'\*\*Analysis:\*\*', '', text)
+        text = re.sub(r'\*\*💬 Response:\*\*', '', text)
+        text = text.split("---")[-1]
+        
+        if "SCORE:" in text.upper():
+            match = re.search(r'SCORE:', text, re.IGNORECASE)
+            if match:
+                text = text[match.start():]
+        
+        return text.strip()
+    
+    def analyze_seo(self, content: str):
+        seo_prompt = f"""Analyze this content for SEO optimization:
+    {content}
+
+    Provide SEO score (0-100) and specific recommendations for:
+    - Meta tags optimization
+    - Keyword usage and density
+    - Content structure and headings
+    - Internal linking opportunities
+    - Mobile responsiveness issues
+
+    Format:
+    SEO_SCORE: [0-100]
+    RECOMMENDATIONS:
+    1. [Specific SEO recommendation]
+    2. [Specific SEO recommendation]
+    3. [Specific SEO recommendation]"""
+        
+        return self.analyze_with_prompt(content, seo_prompt)
+
+    def analyze_accessibility(self, content: str):
+        accessibility_prompt = f"""Analyze this content for accessibility:
+    {content}
+
+    Provide accessibility score (0-100) and specific recommendations for:
+    - Screen reader compatibility
+    - Color contrast issues
+    - Semantic HTML structure
+    - Keyboard navigation
+    - Alt text for images
+
+    Format:
+    ACCESSIBILITY_SCORE: [0-100]
+    RECOMMENDATIONS:
+    1. [Specific accessibility recommendation]
+    2. [Specific accessibility recommendation]
+    3. [Specific accessibility recommendation]"""
+        
+        return self.analyze_with_prompt(content, accessibility_prompt)
+
+    def analyze_with_prompt(self, content: str, prompt: str):
+        if not self.api_token:
+            raise HTTPException(status_code=503, detail="AI service not available")
+        
         try:
-            lines = response_text.split('\n')
-            grammar_score = None
-            key_issues = []
-            suggestions = []
-            revised_examples = []
+            if len(content) > AIConfig.MAX_CONTENT_LENGTH:
+                content = content[:AIConfig.MAX_CONTENT_LENGTH] + "..."
             
-            current_section = None
+            headers = {
+                "Authorization": f"Bearer {self.api_token}",
+                "Content-Type": "application/json"
+            }
             
-            for line in lines:
-                line = line.strip()
-                if line.startswith('GRAMMAR_SCORE:'):
-                    try:
-                        score_text = line.split(':')[1].split('/')[0].strip()
-                        grammar_score = int(score_text)
-                    except (ValueError, IndexError):
-                        grammar_score = 0
-                elif line.startswith('KEY_ISSUES:'):
-                    current_section = 'issues'
-                elif line.startswith('SUGGESTIONS:'):
-                    current_section = 'suggestions'
-                elif line.startswith('REVISED_EXAMPLES:'):
-                    current_section = 'examples'
-                elif line and current_section:
-                    if line.startswith('- ') or line.startswith('• '):
-                        line = line[2:].strip()
-                    
-                    if current_section == 'issues' and line:
-                        key_issues.append(line)
-                    elif current_section == 'suggestions' and line:
-                        suggestions.append(line)
-                    elif current_section == 'examples' and line:
-                        revised_examples.append(line)
+            payload = {
+                "model": AIConfig.HF_MODEL,  
+                "messages": [
+                    {"role": "system", "content": "You are a web content analysis expert."},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 800,
+                "temperature": 0.3
+            }
+            
+            response = requests.post(self.api_url, headers=headers, json=payload, timeout=60)
+            response.raise_for_status()
+            
+            result = response.json()
+            analysis_text = result["choices"][0]["message"]["content"]
             
             return {
-                "grammar_score": grammar_score or 0,
-                "key_issues": key_issues,
-                "suggestions": suggestions,
-                "revised_examples": revised_examples,
-                "full_analysis": response_text
+                "success": True,
+                "analysis": analysis_text,
+                "content_preview": content[:200] + "..." if len(content) > 200 else content
             }
             
         except Exception as e:
-            return {
-                "grammar_score": 0,
-                "key_issues": ["Analysis parsing failed"],
-                "suggestions": ["Check the full analysis for details"],
-                "revised_examples": [],
-                "full_analysis": response_text
-            }
-    
-    @staticmethod
-    def analyze_website(website_id: int, session: Session) -> Website:
-        """Analyze a website's content using AI"""
-        website = session.get(Website, website_id)
-        if not website:
-            raise HTTPException(status_code=404, detail="Website not found")
-        
-        if not website.scraped_content:
-            raise HTTPException(status_code=400, detail="No content to analyze")
-        
-        analysis_result = AIController.analyze_grammar(website.scraped_content)
-        
-        website.grammar_score = analysis_result["grammar_score"]
-        website.improvement_suggestions = "\n".join(analysis_result["suggestions"])
-        website.analysis_result = analysis_result["full_analysis"]
-        
-        session.add(website)
-        session.commit()
-        session.refresh(website)
-        
-        return website
+            raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+ai_controller = AIController()

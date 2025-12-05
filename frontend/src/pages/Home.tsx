@@ -4,92 +4,95 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AnalyzeSection from '../components/AnalyzeSection';
 import HistorySection from '../components/HistorySection';
-import type { Website } from '../services/api';
+import Dashboard from '../components/Dashboard';
+import { Button } from '../components/ui/button';
 
 const Home: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
-  const [websites, setWebsites] = useState<Website[]>([]);
+  const [activeView, setActiveView] = useState<'analyze' | 'history' | 'dashboard'>('analyze');
+  const [recentWebsite, setRecentWebsite] = useState<any>(null);
 
-  const handleWebsiteAdded = (website: Website) => {
-    setWebsites(prev => [website, ...prev]);
+  const handleWebsiteAdded = () => {
+    setActiveView('history');
   };
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontSize: '1.5rem' }}>Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div>Loading...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
       
       {!isAuthenticated ? (
-        <div style={{ 
-          minHeight: 'calc(100vh - 80px)', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          padding: '2rem'
-        }}>
-          <div style={{ maxWidth: '600px', width: '100%', textAlign: 'center' }}>
-            <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
+        <div className="min-h-[calc(100vh-80px)] flex items-center justify-center p-8">
+          <div className="text-center max-w-2xl">
+            <h1 className="text-4xl font-bold mb-4 text-gray-900">
               WebAnalyzer
             </h1>
-            <p style={{ fontSize: '1.3rem', marginBottom: '2rem', color: '#6b7280', lineHeight: '1.6' }}>
-              Analyze any website's content and get AI-powered grammar suggestions, 
-              style improvements, and comprehensive writing analysis to enhance your 
-              online content quality.
+            <p className="text-xl mb-8 text-gray-600">
+              Analyze website content with AI-powered grammar and content quality
             </p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <Link
-                to="/signup"
-                style={{ 
-                  padding: '12px 24px', 
-                  backgroundColor: '#4f46e5', 
-                  color: 'white', 
-                  textDecoration: 'none',
-                  borderRadius: '4px',
-                  fontWeight: 'bold'
-                }}
-              >
-                Get Started Free
+            <div className="flex gap-4 justify-center">
+              <Link to="/signup">
+                <Button size="lg">
+                  Get Started
+                </Button>
               </Link>
-              <Link
-                to="/login"
-                style={{ 
-                  padding: '12px 24px', 
-                  backgroundColor: '#e5e7eb', 
-                  color: '#374151', 
-                  textDecoration: 'none',
-                  borderRadius: '4px',
-                  fontWeight: 'bold'
-                }}
-              >
-                Sign In
+              <Link to="/login">
+                <Button variant="outline" size="lg">
+                  Sign In
+                </Button>
               </Link>
             </div>
           </div>
         </div>
       ) : (
-        <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
-          {/* Welcome Section */}
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '1rem' }}>
-              Welcome to WebAnalyzer!
+        <div className="container mx-auto p-6 max-w-6xl">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold mb-2 text-gray-900">
+              WebAnalyzer
             </h1>
-            <p style={{ fontSize: '1.2rem', color: '#6b7280', maxWidth: '600px', margin: '0 auto' }}>
-              Analyze website content, get grammar scores, and receive AI-powered improvement suggestions.
+            <p className="text-gray-600">
+              Professional website content analysis and auditing
             </p>
           </div>
 
-          {/* Analyze Section */}
-          <AnalyzeSection onWebsiteAdded={handleWebsiteAdded} />
+          <div className="flex gap-4 mb-8 justify-center">
+            <Button
+              onClick={() => setActiveView('analyze')}
+              variant={activeView === 'analyze' ? "default" : "outline"}
+              size="lg"
+            >
+              Analyze Website
+            </Button>
+            <Button
+              onClick={() => setActiveView('history')}
+              variant={activeView === 'history' ? "default" : "outline"}
+              size="lg"
+            >
+              View History
+            </Button>
+            <Button
+              onClick={() => setActiveView('dashboard')}
+              variant={activeView === 'dashboard' ? "default" : "outline"}
+              size="lg"
+            >
+              Dashboard
+            </Button>
+          </div>
 
-          {/* History Section */}
-          <HistorySection />
+          {activeView === 'analyze' ? (
+            <AnalyzeSection onWebsiteAdded={handleWebsiteAdded} />
+          ) : activeView === 'history' ? (
+            <HistorySection />
+          ) : (
+            <Dashboard />
+          )}
         </div>
       )}
     </div>

@@ -1,7 +1,11 @@
-// src/components/Signup.tsx
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Alert, AlertDescription } from './ui/alert';
 
 const Signup: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -12,7 +16,6 @@ const Signup: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
   const { signup } = useAuth();
   const navigate = useNavigate();
 
@@ -26,11 +29,11 @@ const Signup: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
+    
     if (formData.password !== formData.confirmPassword) {
       return setError('Passwords do not match');
     }
-
+    
     if (formData.password.length < 6) {
       return setError('Password must be at least 6 characters');
     }
@@ -51,97 +54,89 @@ const Signup: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb', padding: '20px' }}>
-      <div style={{ maxWidth: '400px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937' }}>
-            Create your account
-          </h2>
-        </div>
-        
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {error && (
-            <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '12px', borderRadius: '6px', marginBottom: '20px' }}>
-              {error}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Create your account</CardTitle>
+          <CardDescription className="text-center">
+            Enter your details to create a new account
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={loading}
+              />
             </div>
-          )}
-          
-          <div style={{ marginBottom: '15px' }}>
-            <input
-              name="email"
-              type="email"
-              required
-              style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-              placeholder="Email address"
-              value={formData.email}
-              onChange={handleChange}
-            />
-          </div>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <input
-              name="username"
-              type="text"
-              required
-              style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-              placeholder="Username"
-              value={formData.username}
-              onChange={handleChange}
-            />
-          </div>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <input
-              name="password"
-              type="password"
-              required
-              style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
-            />
-          </div>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <input
-              name="confirmPassword"
-              type="password"
-              required
-              style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-              placeholder="Confirm Password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div>
-            <button
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                name="username"
+                type="text"
+                required
+                placeholder="Choose a username"
+                value={formData.username}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+            <Button
               type="submit"
+              className="w-full"
               disabled={loading}
-              style={{ 
-                width: '100%', 
-                padding: '12px', 
-                backgroundColor: '#4f46e5', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '4px',
-                opacity: loading ? 0.5 : 1
-              }}
             >
               {loading ? 'Creating Account...' : 'Sign up'}
-            </button>
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            <Link
-              to="/login"
-              style={{ color: '#4f46e5', textDecoration: 'none' }}
-            >
-              Already have an account? Sign in
-            </Link>
-          </div>
-        </form>
-      </div>
+            </Button>
+            <div className="text-center text-sm">
+              <span className="text-muted-foreground">Already have an account? </span>
+              <Link to="/login" className="text-primary hover:underline font-medium">
+                Sign in
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

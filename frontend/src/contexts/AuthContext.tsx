@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect} from 'react';
-import type { ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import type { User, LoginData, SignupData } from '../services/api';
 
@@ -23,7 +22,7 @@ export const useAuth = () => {
 };
 
 interface AuthProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -61,7 +60,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signup = async (data: SignupData) => {
     try {
       const user = await apiService.signup(data);
-      // After signup, automatically login
       const loginData = { email: data.email, password: data.password };
       const authResponse = await apiService.login(loginData);
       apiService.storeAuthData(authResponse);

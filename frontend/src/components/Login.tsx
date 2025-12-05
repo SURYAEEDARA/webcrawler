@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Alert, AlertDescription } from './ui/alert';
 
 const Login: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -9,7 +14,6 @@ const Login: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -23,7 +27,6 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
     try {
       setLoading(true);
       await login(formData);
@@ -36,73 +39,64 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb', padding: '20px' }}>
-      <div style={{ maxWidth: '400px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937' }}>
-            Sign in to your account
-          </h2>
-        </div>
-        
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '12px', borderRadius: '6px', marginBottom: '20px' }}>
-              {error}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Sign in to your account</CardTitle>
+          <CardDescription className="text-center">
+            Enter your email and password to access your account
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={loading}
+              />
             </div>
-          )}
-          
-          <div style={{ marginBottom: '15px' }}>
-            <input
-              name="email"
-              type="text"
-              required
-              style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-              placeholder="email"
-              value={formData.email}
-              onChange={handleChange}
-            />
-          </div>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <input
-              name="password"
-              type="password"
-              required
-              style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div>
-            <button
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+            <Button
               type="submit"
+              className="w-full"
               disabled={loading}
-              style={{ 
-                width: '100%', 
-                padding: '12px', 
-                backgroundColor: '#4f46e5', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '4px',
-                opacity: loading ? 0.5 : 1
-              }}
             >
               {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            <Link
-              to="/signup"
-              style={{ color: '#4f46e5', textDecoration: 'none' }}
-            >
-              Don't have an account? Sign up
-            </Link>
-          </div>
-        </form>
-      </div>
+            </Button>
+            <div className="text-center text-sm">
+              <span className="text-muted-foreground">Don't have an account? </span>
+              <Link to="/signup" className="text-primary hover:underline font-medium">
+                Sign up
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };
